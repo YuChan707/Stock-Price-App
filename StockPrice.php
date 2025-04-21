@@ -1,4 +1,4 @@
-<!-- filepath: c:\wamp64\www\2025\Stock Price App\StockPrice.php -->
+
 <?php
 // Get the sending information (search text)
 $searchText = $_GET["searchKey"];
