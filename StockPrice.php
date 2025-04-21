@@ -1,45 +1,74 @@
+
 <?php
-    //read the csv and put together the select element and send it back to the HTML 
-    $file = "distance_NY_worldcapitals_partial.csv";
+// Get the sending information (search text)
+$searchText = $_GET["searchKey"];
+$csvfile = "top10companies.csv";
 
-    //ensuring the csv file exists and it can create an input stream out of it
-    if (file_exists($file) && $fileStream = fopen($file, "r"))
-    {
-        //prepare to read the file
-        //first skip the first two lines on the csv file
-        $numreading = 1;
+// Read the CSV and search for a match with the search text
+if (file_exists($csvfile) && $filestream = fopen($csvfile, "r")) {
+    // Create a variable used to skip the first reading
+    $firstReading = true;
 
-        //send back the start of the select element to the HTML page
-        print("<select id='countryList' onchange='showdistance()'>");
-        print("<option value=''>Select a Country</option>");
+    // Boolean variable for a match
+    $found = false;
 
-        //loop through the entire file stream
-        while ( ($recordArray = fgetcsv($fileStream, 0, ",")) != FALSE   )
-        {
-            //skipping the first two records
-            if ($numreading <= 2) $numreading++;
-            else
-            {
-                //extract the components of the record we read
-                $country = $recordArray[0];
-                $capital = $recordArray[1];
-                $miles = $recordArray[2];
-                $km = $recordArray[3];
+    // Number of matches
+    $nummatch = 0;
 
-                //populate the select element with the option
-                //but first let's put together the value of the option
-                $optionValue = $country.",".$capital.",".$miles.",".$km;
+    // If more than 1 match, then store them in an array
+    $matches = array();
 
-                //now send the option to HTML
-                print("<option value='" . $optionValue . "'>" . $country.", ". $capital. "</option>");
+    // Indexes of array $matches
+    $i = 0; // Row
+    $j = 0; // Column
+
+    // Loop through the $filestream
+    while (($recordArray = fgetcsv($filestream, 0, ";")) != false) {
+        if ($firstReading == true) {
+            $firstReading = false;
+        } else {
+            // The columns of the CSV: Exchange, Symbol, Name, LastSale, MarketCap, ADR TSO,
+            // IPOyear, Sector, Industry, Summary Quote,
+            // Extract the relevant individual values only
+            $symbol = $recordArray[1];
+            $company = $recordArray[2];
+
+            if (stripos($company, $searchText) !== false || stripos($symbol, $searchText) !== false) {
+                $found = true;
+                $nummatch++;
+
+                // Populate the array
+                $matches[$i][0] = $symbol;
+                $matches[$i][1] = $company;
+                $i++;
             }
-        }//end of while loop
+        }
+    } // End of while loop
 
-        //send back the close of select element
-        print("</select>");
+    if ($found == false) {
+        print("No match found");
+    } else {
+        if ($nummatch == 1) {
+            $info = $symbol . "/" . $company; // Using '/' in case companies have a comma in their names
+            print("onematch" . "/" . $info);
+        } else {
+            // Start sending the beginning of a select element
+            print("<select id='companyList' onchange='getSymbol()'>");
+            print("<option value=''>Select a Company</option>");
+
+            // Loop through the match array and send the option to HTML
+            for ($j = 0; $j < $i; $j++) {
+                $symbol = $matches[$j][0];
+                $company = $matches[$j][1];
+                $info = $symbol . "/" . $company;
+                print("<option value='" . $info . "'>" . $company . "</option>");
+            }
+
+            // Send close select to HTML
+            print("</select>");
+        }
     }
-
-
-
-
+} else {
+    print("CSV file not available");
+}
 ?>
