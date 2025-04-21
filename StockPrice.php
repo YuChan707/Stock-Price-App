@@ -1,4 +1,4 @@
-
+<!-- filepath: c:\wamp64\www\2025\Stock Price App\StockPrice.php -->
 <?php
 // Get the sending information (search text)
 $searchText = $_GET["searchKey"];
@@ -6,8 +6,15 @@ $csvfile = "top10companies.csv";
 
 // Read the CSV and search for a match with the search text
 if (file_exists($csvfile) && $filestream = fopen($csvfile, "r")) {
-    // Create a variable used to skip the first reading
-    $firstReading = true;
+    // Read the header row to determine column indexes
+    $header = fgetcsv($filestream, 0, ",");
+    $symbolIndex = array_search("Symbol", $header);
+    $companyIndex = array_search("Company", $header);
+
+    if ($symbolIndex === false || $companyIndex === false) {
+        print("Invalid CSV format");
+        exit;
+    }
 
     // Boolean variable for a match
     $found = false;
@@ -20,28 +27,21 @@ if (file_exists($csvfile) && $filestream = fopen($csvfile, "r")) {
 
     // Indexes of array $matches
     $i = 0; // Row
-    $j = 0; // Column
 
     // Loop through the $filestream
-    while (($recordArray = fgetcsv($filestream, 0, ";")) != false) {
-        if ($firstReading == true) {
-            $firstReading = false;
-        } else {
-            // The columns of the CSV: Exchange, Symbol, Name, LastSale, MarketCap, ADR TSO,
-            // IPOyear, Sector, Industry, Summary Quote,
-            // Extract the relevant individual values only
-            $symbol = $recordArray[1];
-            $company = $recordArray[2];
+    while (($recordArray = fgetcsv($filestream, 0, ",")) !== false) {
+        // Extract the relevant individual values only
+        $symbol = $recordArray[$symbolIndex];
+        $company = $recordArray[$companyIndex];
 
-            if (stripos($company, $searchText) !== false || stripos($symbol, $searchText) !== false) {
-                $found = true;
-                $nummatch++;
+        if (stripos($company, $searchText) !== false || stripos($symbol, $searchText) !== false) {
+            $found = true;
+            $nummatch++;
 
-                // Populate the array
-                $matches[$i][0] = $symbol;
-                $matches[$i][1] = $company;
-                $i++;
-            }
+            // Populate the array
+            $matches[$i][0] = $symbol;
+            $matches[$i][1] = $company;
+            $i++;
         }
     } // End of while loop
 
@@ -49,7 +49,7 @@ if (file_exists($csvfile) && $filestream = fopen($csvfile, "r")) {
         print("No match found");
     } else {
         if ($nummatch == 1) {
-            $info = $symbol . "/" . $company; // Using '/' in case companies have a comma in their names
+            $info = $matches[0][0] . "/" . $matches[0][1]; // Using '/' in case companies have a comma in their names
             print("onematch" . "/" . $info);
         } else {
             // Start sending the beginning of a select element
@@ -57,9 +57,9 @@ if (file_exists($csvfile) && $filestream = fopen($csvfile, "r")) {
             print("<option value=''>Select a Company</option>");
 
             // Loop through the match array and send the option to HTML
-            for ($j = 0; $j < $i; $j++) {
-                $symbol = $matches[$j][0];
-                $company = $matches[$j][1];
+            foreach ($matches as $match) {
+                $symbol = $match[0];
+                $company = $match[1];
                 $info = $symbol . "/" . $company;
                 print("<option value='" . $info . "'>" . $company . "</option>");
             }
